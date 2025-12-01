@@ -1,0 +1,91 @@
+import random
+import discord
+from discord.ui import View, Button
+
+
+# チーム振り分けを定義する View クラス
+class TeamControlView(View):
+
+
+    def __init__(self, members, today, count):
+        super().__init__(timeout=300)
+
+        self.members = members
+        self.today = today
+        self.count = count
+
+        self.current_embed = None
+        self.update_teams()
+
+
+    def update_teams(self):
+        self.count += 1
+        members_to_split = self.members[:]
+        # ランダムにシャッフル
+        random.shuffle(members_to_split)
+        # チーム分け
+        spectator = []
+        if len(members_to_split) > 8:
+            spectator = members_to_split[8:]
+            members_to_split = members_to_split[:8]
+        team_size = len(members_to_split) // 2
+        team_alpha = members_to_split[team_size:]
+        team_beta = members_to_split[:team_size]
+        # メンションを作成して送信
+        mentions_alpha = "\n".join(member.mention for member in team_alpha)
+        mentions_beta = "\n".join(member.mention for member in team_beta)
+        mentions_spectator = "\n".join(member.mention for member in spectator)
+        # Embedの作成
+        embed = discord.Embed(
+            title="⚔️ チーム編成",
+            description=f"{self.today} {self.count}回目",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="🟨 アルファチーム", value=mentions_alpha, inline=True)
+        embed.add_field(name="🟦 ブラボーチーム", value=mentions_beta, inline=True)
+        embed.add_field(name="👀 観戦者", value=mentions_spectator, inline=True)
+        # embedセット
+        self.current_embed = embed
+
+
+    # 「再シャッフル」ボタンの定義
+    @discord.ui.button(label="再シャッフル", style=discord.ButtonStyle.secondary, emoji="🔁")
+    async def reshuffle_button(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer() # 処理中であることを表示
+        self.update_teams() # チーム分けを更新
+        # メッセージの編集 
+        await interaction.edit_original_response(
+            embed=self.current_embed
+        )
+
+        
+    # 「メンバー再選択」ボタンの定義
+    @discord.ui.button(label="メンバー再選択", style=discord.ButtonStyle.secondary, emoji="👥")
+    async def reselection_button(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer()
+        from MemberSelectView import MemberSelectView
+        member_view = MemberSelectView(self.today, self.count)
+        await interaction.edit_original_response(
+            embed=member_view.init_embed,
+            view=member_view
+        )
+
+
+    # 「確定」ボタンの定義
+    @discord.ui.button(label="確定", style=discord.ButtonStyle.success, emoji="✅")
+    async def confirm_button(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer()  # 処理中であることを表示
+        self.current_embed.title = "✅ チーム編成完了！"
+        self.current_embed.color = discord.Color.green()
+        self.current_embed.set_footer(text=f"チーム編成が確定しました。確定者: {interaction.user.display_name}")
+
+        # View全体を無効化
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+
+        # メッセージを更新し、ボタンを無効化
+        await interaction.edit_original_response(
+            embed=self.current_embed,
+            view=self
+        )
