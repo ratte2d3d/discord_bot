@@ -1,4 +1,5 @@
 import random
+import datetime
 import discord
 from discord.ui import View, Button
 
@@ -7,11 +8,11 @@ from discord.ui import View, Button
 class TeamControlView(View):
 
 
-    def __init__(self, members, today, count):
-        super().__init__(timeout=300)
+    def __init__(self, members, start_time, count):
+        super().__init__(timeout=900)
 
         self.members = members
-        self.today = today
+        self.start_time = start_time
         self.count = count
 
         self.current_embed = None
@@ -19,7 +20,7 @@ class TeamControlView(View):
 
 
     def update_teams(self):
-        self.count += 1
+
         members_to_split = self.members[:]
         # ランダムにシャッフル
         random.shuffle(members_to_split)
@@ -37,13 +38,15 @@ class TeamControlView(View):
         mentions_spectator = "\n".join(member.mention for member in spectator)
         # Embedの作成
         embed = discord.Embed(
-            title="⚔️ チーム編成",
-            description=f"{self.today} {self.count}回目",
-            color=discord.Color.green()
+            title="🔶 チーム編成",
+            description=f"{self.count}試合目",
+            color=discord.Color.dark_orange()
         )
-        embed.add_field(name="🟨 アルファチーム", value=mentions_alpha, inline=True)
-        embed.add_field(name="🟦 ブラボーチーム", value=mentions_beta, inline=True)
-        embed.add_field(name="👀 観戦者", value=mentions_spectator, inline=True)
+        embed.add_field(name="🟨 アルファチーム", value=mentions_alpha, inline=False)
+        embed.add_field(name="🟦 ブラボーチーム", value=mentions_beta, inline=False)
+        embed.add_field(name="👀 観戦者", value=mentions_spectator, inline=False)
+        now_time = datetime.datetime.now().strftime("%H:%M")
+        embed.set_footer(text=f"最終更新: {now_time}")
         # embedセット
         self.current_embed = embed
 
@@ -64,28 +67,40 @@ class TeamControlView(View):
     async def reselection_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.defer()
         from MemberSelectView import MemberSelectView
-        member_view = MemberSelectView(self.today, self.count)
+        member_view = MemberSelectView(self.start_time, self.count)
         await interaction.edit_original_response(
             embed=member_view.init_embed,
             view=member_view
         )
 
 
-    # 「確定」ボタンの定義
-    @discord.ui.button(label="確定", style=discord.ButtonStyle.success, emoji="✅")
-    async def confirm_button(self, interaction: discord.Interaction, button: Button):
-        await interaction.response.defer()  # 処理中であることを表示
-        self.current_embed.title = "✅ チーム編成完了！"
-        self.current_embed.color = discord.Color.green()
-        self.current_embed.set_footer(text=f"チーム編成が確定しました。確定者: {interaction.user.display_name}")
-
-        # View全体を無効化
-        self.stop()
-        for child in self.children:
-            child.disabled = True
-
-        # メッセージを更新し、ボタンを無効化
+    # 「試合開始」ボタンの定義
+    @discord.ui.button(label="試合開始", style=discord.ButtonStyle.primary, emoji="⚔️")
+    async def buttle_button(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer()
+        from ButtleView import ButtleView
+        buttle_view = ButtleView(self.members, self.start_time, self.count, self.current_embed)
         await interaction.edit_original_response(
-            embed=self.current_embed,
-            view=self
+            embed=buttle_view.init_view,
+            view=buttle_view
         )
+
+
+    # # 「確定」ボタンの定義
+    # @discord.ui.button(label="確定", style=discord.ButtonStyle.success, emoji="✅")
+    # async def confirm_button(self, interaction: discord.Interaction, button: Button):
+    #     await interaction.response.defer()  # 処理中であることを表示
+    #     self.current_embed.title = "✅ チーム編成完了！"
+    #     self.current_embed.color = discord.Color.green()
+    #     self.current_embed.set_footer(text=f"チーム編成が確定しました。確定者: {interaction.user.display_name}")
+
+    #     # View全体を無効化
+    #     self.stop()
+    #     for child in self.children:
+    #         child.disabled = True
+
+    #     # メッセージを更新し、ボタンを無効化
+    #     await interaction.edit_original_response(
+    #         embed=self.current_embed,
+    #         view=self
+    #     )

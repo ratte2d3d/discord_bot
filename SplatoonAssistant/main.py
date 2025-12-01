@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import date
+from datetime import datetime
 
 from dotenv import load_dotenv
 import discord
@@ -48,8 +48,8 @@ async def on_ready():
 
 @bot.tree.command(name='team', description="ランダムにチーム分けを行います")
 async def random_assign_command(interaction: discord.Interaction):
-    today = date.today()
-    member_view = MemberSelectView(today)
+    start_time = datetime.now().strftime("%Y/%m/%d %H:%M")
+    member_view = MemberSelectView(start_time)
     await interaction.response.send_message(
         embed=member_view.init_embed,
         view=member_view
