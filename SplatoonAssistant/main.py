@@ -15,11 +15,12 @@ token = os.getenv("SPLATOON_ASSISTANT_TOKEN")
 
 # Botオブジェクト
 intents = discord.Intents.default()
-intents.members = True          # ユーザー選択に必要
-bot = commands.Bot(command_prefix='!', intents=intents) 
+intents.members = True  # ユーザー選択に必要
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ブキデータを保存するためのグローバル変数
 weapon_data = {}
+
 
 # Stat.ink APIからブキデータを取得する関数
 def get_weapon_data():
@@ -28,9 +29,10 @@ def get_weapon_data():
     resp.raise_for_status()
     return resp.json()
 
+
 @bot.event
 async def on_ready():
-    print(f'{bot.user} がログインしました！')
+    print(f"{bot.user} がログインしました！")
 
     # ブキデータの取得
     global weapon_data
@@ -44,25 +46,23 @@ async def on_ready():
         print(f"スラッシュコマンドの同期中にエラーが発生しました: {e}")
 
 
-@bot.tree.command(name='team', description="ランダムにチーム分けを行います")
+@bot.tree.command(name="game-start", description="チーム分けや戦績管理を行います")
 async def random_assign_command(interaction: discord.Interaction):
     start_time = datetime.now().strftime("%Y/%m/%d %H:%M")
-    member_view = MemberSelectView(start_time=start_time)
+    member_view = MemberSelectView(weapons=weapon_data, start_time=start_time)
     await interaction.response.send_message(
-        embed=member_view.init_embed,
-        view=member_view
+        embed=member_view.init_embed, view=member_view
     )
 
 
-@bot.tree.command(name='weapon', description="ブキをランダムに選択します")
+@bot.tree.command(name="weapon", description="ブキをランダムに選択します")
 async def random_weapon_command(interaction: discord.Interaction):
     global weapon_data
     # ランダム選択 & 成形
     weapon_view = WeaponScopeSelectView(weapon_data)
     # Viewと、Viewが生成したEmbedをメッセージに付与して送信
     await interaction.response.send_message(
-        embed=weapon_view.current_embed,
-        view=weapon_view
+        embed=weapon_view.current_embed, view=weapon_view
     )
 
 

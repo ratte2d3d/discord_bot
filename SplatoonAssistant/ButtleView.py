@@ -6,9 +6,10 @@ from discord.ui import View, Button
 # 勝利判定を定義する View クラス
 class ButtleView(View):
 
-    def __init__(self, start_time, count, embed, record, alpha, beta, spec):
+    def __init__(self, weapons, start_time, count, embed, record, alpha, beta, spec):
         super().__init__(timeout=None)
 
+        self.weapons = weapons
         self.start_time = start_time
         self.count = count
         self.record = record
@@ -28,6 +29,7 @@ class ButtleView(View):
     async def alpha_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.defer()
         caution_view = CautionView(
+            self.weapons,
             self.start_time,
             self.count,
             self.init_view,
@@ -48,6 +50,7 @@ class ButtleView(View):
     async def beta_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.defer()
         caution_view = CautionView(
+            self.weapons,
             self.start_time,
             self.count,
             self.init_view,
@@ -68,6 +71,7 @@ class ButtleView(View):
     async def invalid_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.defer()
         caution_view = CautionView(
+            self.weapons,
             self.start_time,
             self.count,
             self.init_view,
@@ -85,10 +89,20 @@ class ButtleView(View):
 class CautionView(View):
 
     def __init__(
-        self, start_time, count, embed, record, alpha, beta, spec, win_team=None
+        self,
+        weapons,
+        start_time,
+        count,
+        embed,
+        record,
+        alpha,
+        beta,
+        spec,
+        win_team=None,
     ):
         super().__init__(timeout=None)
 
+        self.weapons = weapons
         self.start_time = start_time
         self.count = count
         self.embed = embed
@@ -117,6 +131,7 @@ class CautionView(View):
         await interaction.response.defer()
         # 「試合中」に戻る
         buttle_view = ButtleView(
+            self.weapons,
             self.start_time,
             self.count,
             self.embed,
@@ -155,7 +170,9 @@ class CautionView(View):
             if r.name in lose_members:
                 r.record_lose()
         members = self.alpha + self.beta + self.spec
-        team_view = TeamControlView(self.start_time, self.count, self.record, members)
+        team_view = TeamControlView(
+            self.weapons, self.start_time, self.count, self.record, members
+        )
         await interaction.edit_original_response(
             embed=team_view.current_embed, view=team_view
         )

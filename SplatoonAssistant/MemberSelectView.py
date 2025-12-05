@@ -7,10 +7,11 @@ from TeamControlView import TeamControlView
 class MemberSelectView(View):
 
     # タイムアウト時間など、Viewの基本設定をここに書く
-    def __init__(self, start_time, count=1, record=[]):
+    def __init__(self, weapons, start_time, count=1, record=[]):
         super().__init__(timeout=None)
 
-        # 日付と試合回数と戦績
+        # 初期化
+        self.weapons = weapons
         self.start_time = start_time
         self.count = count
         self.record = record
@@ -30,7 +31,7 @@ class MemberSelectView(View):
     ):
         # 選択完了時の処理
         team_view = TeamControlView(
-            self.start_time, self.count, self.record, select.values
+            self.weapons, self.start_time, self.count, self.record, select.values
         )
         await interaction.response.edit_message(
             embed=team_view.current_embed, view=team_view
