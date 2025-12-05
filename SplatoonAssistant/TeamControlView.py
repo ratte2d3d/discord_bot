@@ -7,9 +7,10 @@ from discord.ui import View, Button
 # チーム振り分けを定義する View クラス
 class TeamControlView(View):
 
-    def __init__(self, start_time, count, record, members):
+    def __init__(self, weapons, start_time, count, record, members):
         super().__init__(timeout=None)
 
+        self.weapons = weapons
         self.start_time = start_time
         self.count = count
         self.record = record
@@ -25,6 +26,9 @@ class TeamControlView(View):
     def update_teams(self):
 
         members_to_split = self.members[:]
+        # 人数ハンデ
+        handicap = len(members_to_split) % 2 != 0
+        handicap_text = "（人数ハンデあり）" if handicap else ""
         # ランダムにシャッフル
         random.shuffle(members_to_split)
         # チーム分け
@@ -35,15 +39,30 @@ class TeamControlView(View):
         team_size = len(members_to_split) // 2
         self.team_alpha = members_to_split[team_size:]
         self.team_beta = members_to_split[:team_size]
+        # 人数ハンデありの場合
+        mentions_alpha_list = []
+        if handicap:
+            # ランダムに武器選択
+            from WeaponRandomSelectView import WeaponRandomSelectView
+
+            for member in self.team_alpha:
+                weapon_view = WeaponRandomSelectView(weapons=self.weapons)
+                weapon = ""
+                for field in weapon_view.current_embed.fields:
+                    weapon = field.value
+                mentions_alpha_list.append(member.mention + f"\n（ブキ候補：{weapon}）")
+        else:
+            for member in self.team_alpha:
+                mentions_alpha_list.append(member.mention)
         # メンションを作成して送信
-        mentions_alpha = "\n".join(member.mention for member in self.team_alpha)
+        mentions_alpha = "\n".join(mentions_alpha_list)
         mentions_beta = "\n".join(member.mention for member in self.team_beta)
         mentions_spectator = "\n".join(member.name.mention for member in self.spectator)
         # Embedの作成
         embed = discord.Embed(
-            title="🔶 チーム編成",
+            title=f"🔶 チーム編成{handicap_text}",
             description=f"{self.count}試合目",
-            color=discord.Color.dark_orange(),
+            color=discord.Color.orange(),
         )
         embed.add_field(name="🟨 アルファチーム", value=mentions_alpha, inline=False)
         embed.add_field(name="🟦 ブラボーチーム", value=mentions_beta, inline=False)
@@ -73,7 +92,9 @@ class TeamControlView(View):
         await interaction.response.defer()
         from MemberSelectView import MemberSelectView
 
-        member_view = MemberSelectView(self.start_time, self.count, self.record)
+        member_view = MemberSelectView(
+            self.weapons, self.start_time, self.count, self.record
+        )
         await interaction.edit_original_response(
             embed=member_view.init_embed, view=member_view
         )
@@ -85,6 +106,7 @@ class TeamControlView(View):
         from ButtleView import ButtleView
 
         buttle_view = ButtleView(
+            self.weapons,
             self.start_time,
             self.count,
             self.current_embed,
